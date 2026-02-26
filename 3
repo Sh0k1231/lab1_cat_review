@@ -1,0 +1,121 @@
+#pragma once
+
+#include <iostream>
+#include <string>
+#include <algorithm>
+
+struct FInputParams
+{
+	int32 Base;
+	int32 Digits;
+};
+
+struct FResult
+{
+	double	Count;
+	bool	bSuccess;
+	std::string	ErrorMessage;
+};
+
+const int32 MIN_BASE = 2;
+const int32 MAX_BASE = 10;
+const int32 MIN_DIGITS = 2;
+const int32 MAX_DIGITS = 19;
+const int32 MAX_BASE_DIGITS_SUM = 25;
+
+bool AreInputParamsValid(const FInputParams& InParams)
+{
+	if (InParams.Base < MIN_BASE || InParams.Base > MAX_BASE)
+	{
+		return false;
+	}
+	
+	if (InParams.Digits <= MIN_DIGITS || InParams.Digits >= MAX_DIGITS)
+	{
+		return false;
+	}
+	
+	if (InParams.Digits + InParams.Base >= MAX_BASE_DIGITS_SUM)
+	{
+		return false;
+	}
+	
+	return true;
+}
+
+FResult CountNumbersWithFourZeros(const FInputParams& InParams)
+{
+	FResult result;
+	result.bSuccess = false;
+	result.Count = 0.0;
+
+	if (!AreInputParamsValid(InParams))
+	{
+		result.ErrorMessage = "Некорректные данные";
+		return result;
+	}
+	
+	double currentNoZeros = InParams.Base - 1;
+	double currentOneZero = 1;
+	double currentTwoZeros = 0;
+	double currentThreeZeros = 0;
+	double currentFourOrMoreZeros = 0;
+
+	for (int32 digitIndex = 2; digitIndex <= InParams.Digits; ++digitIndex)
+	{
+		double nextNoZeros = currentNoZeros;
+		double nextOneZero = currentOneZero;
+		double nextTwoZeros = currentTwoZeros;
+		double nextThreeZeros = currentThreeZeros;
+		double nextFourOrMoreZeros = currentFourOrMoreZeros;
+
+		currentNoZeros = (nextNoZeros + nextOneZero + nextTwoZeros + nextThreeZeros + nextFourOrMoreZeros) * (InParams.Base - 1);
+		currentOneZero = nextNoZeros;
+		currentTwoZeros = nextOneZero;
+		currentThreeZeros = nextTwoZeros;
+		currentFourOrMoreZeros = nextThreeZeros + nextFourOrMoreZeros * InParams.Base;
+	}
+
+	result.Count = currentFourOrMoreZeros;
+	result.bSuccess = true;
+	
+	return result;
+}
+
+FInputParams ReadInputFromUser()
+{
+	FInputParams params;
+	
+	std::cout << "Введите систему счисления (2-10): ";
+	std::cin >> params.Base;
+	
+	std::cout << "Введите количество разрядов (1 < N < 20, N+K < 26): ";
+	std::cin >> params.Digits;
+	
+	return params;
+}
+
+void PrintResult(const FResult& InResult)
+{
+	if (InResult.bSuccess)
+	{
+		std::cout << "Количество чисел, содержащих более трёх идущих нулей: " << InResult.Count << std::endl;
+	}
+	else
+	{
+		std::cout << "Ошибка: " << InResult.ErrorMessage << ", повторите ввод" << std::endl;
+	}
+}
+
+int main()
+{
+	setlocale(LC_ALL, "ru");
+	
+	FInputParams params = ReadInputFromUser();
+	
+	FResult result = CountNumbersWithFourZeros(params);
+	
+	PrintResult(result);
+
+	return 0;
+}
