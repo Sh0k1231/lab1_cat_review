@@ -1,0 +1,144 @@
+#pragma once
+
+#include <fstream>
+#include <vector>
+#include <algorithm>
+#include <iostream>
+
+struct FBoardParams
+{
+	int32 Size;
+	int32 MaxSum;
+};
+
+struct FResult
+{
+	int32			MaxSum;
+	bool			bSuccess;
+	std::string		ErrorMessage;
+};
+
+bool IsValidBoardSize(int32 InSize)
+{
+	return (InSize > 1 && InSize < 80);
+}
+
+bool IsValidCellValue(int32 InValue)
+{
+	return InValue <= 100;
+}
+
+FResult SolveTurtleProblem(const std::string& InInputFile, const std::string& InOutputFile)
+{
+	FResult result;
+	result.bSuccess = false;
+	
+	std::ifstream inputFile(InInputFile);
+	if (!inputFile.is_open())
+	{
+		result.ErrorMessage = "Не удалось открыть входной файл";
+		return result;
+	}
+
+	std::ofstream outputFile(InOutputFile);
+	if (!outputFile.is_open())
+	{
+		result.ErrorMessage = "Не удалось открыть выходной файл";
+		return result;
+	}
+
+	int32 boardSize;
+	inputFile >> boardSize;
+
+	if (!IsValidBoardSize(boardSize))
+	{
+		result.ErrorMessage = "Ошибка: размер доски должен быть 1 < N < 80";
+		std::cout << result.ErrorMessage << std::endl;
+		return result;
+	}
+
+	std::vector<std::vector<int32>> board(boardSize, std::vector<int32>(boardSize));
+	std::vector<std::vector<int32>> sumBoard(boardSize, std::vector<int32>(boardSize, 0));
+
+	bool bValuesValid = true;
+	for (int32 row = 0; row < boardSize; ++row)
+	{
+		for (int32 col = 0; col < boardSize; ++col)
+		{
+			inputFile >> board[row][col];
+			
+			if (!IsValidCellValue(board[row][col]))
+			{
+				std::cout << "Слишком большое число, элементы должны быть меньше 100" << std::endl;
+				bValuesValid = false;
+				break;
+			}
+		}
+		if (!bValuesValid) break;
+	}
+
+	if (!bValuesValid)
+	{
+		result.ErrorMessage = "Обнаружены некорректные значения";
+		return result;
+	}
+	
+	for (int32 row = 0; row < boardSize; ++row)
+	{
+		for (int32 col = boardSize - 1; col >= 0; --col)
+		{
+			if (row == 0 && col == boardSize - 1)
+			{
+				sumBoard[row][col] = board[row][col];
+			}
+			else if (row == 0)
+			{
+				sumBoard[row][col] = sumBoard[row][col + 1] + board[row][col];
+			}
+			else if (col == boardSize - 1)
+			{
+				sumBoard[row][col] = sumBoard[row - 1][col] + board[row][col];
+			}
+			else
+			{
+				sumBoard[row][col] = std::max(sumBoard[row - 1][col], sumBoard[row][col + 1]) + board[row][col];
+			}
+		}
+	}
+
+	result.MaxSum = sumBoard[boardSize - 1][0];
+	result.bSuccess = true;
+
+	outputFile << result.MaxSum;
+	
+	inputFile.close();
+	outputFile.close();
+
+	return result;
+}
+
+void PrintResult(const FResult& InResult)
+{
+	if (InResult.bSuccess)
+	{
+		std::cout << "Максимальная сумма чисел записана в файл и равна = " << InResult.MaxSum << std::endl;
+	}
+	else
+	{
+		std::cout << "Ошибка: " << InResult.ErrorMessage << std::endl;
+	}
+}
+
+int main()
+{
+	setlocale(LC_ALL, "Russian");
+	
+	const std::string InputFileName = "21.txt";
+	const std::string OutputFileName = "22.txt";
+
+	FResult result = SolveTurtleProblem(InputFileName, OutputFileName);
+
+	PrintResult(result);
+
+	return 0;
+}
