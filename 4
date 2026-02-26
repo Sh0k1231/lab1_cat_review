@@ -1,0 +1,176 @@
+#pragma once
+
+#include <iostream>
+#include <string>
+#include <cctype>
+
+const char TRUE_CHAR = 'T';
+const char FALSE_CHAR = 'F';
+
+const std::string AND_OPERATOR = "And(";
+const std::string OR_OPERATOR = "Or(";
+
+struct FParseResult
+{
+	bool	bValue;
+	int32	NewPosition;
+	bool	bSuccess;
+};
+
+int32 SkipSpaces(const std::string& InString, int32 InPosition)
+{
+	int32 currentPos = InPosition;
+	
+	while (currentPos < static_cast<int32>(InString.length()) && 
+		   std::isspace(static_cast<unsigned char>(InString[currentPos])))
+	{
+		++currentPos;
+	}
+	
+	return currentPos;
+}
+
+FParseResult ParseExpression(const std::string& InString, int32 InPosition)
+{
+	FParseResult result;
+	result.bSuccess = false;
+	result.bValue = false;
+	result.NewPosition = InPosition;
+
+	int32 currentPos = SkipSpaces(InString, InPosition);
+	
+	if (currentPos >= static_cast<int32>(InString.length()))
+	{
+		return result;
+	}
+
+	if (InString[currentPos] == TRUE_CHAR)
+	{
+		result.bValue = true;
+		result.NewPosition = currentPos + 1;
+		result.bSuccess = true;
+		return result;
+	}
+
+	if (InString[currentPos] == FALSE_CHAR)
+	{
+		result.bValue = false;
+		result.NewPosition = currentPos + 1;
+		result.bSuccess = true;
+		return result;
+	}
+
+	if (InString.substr(currentPos, AND_OPERATOR.length()) == AND_OPERATOR)
+	{
+		currentPos += static_cast<int32>(AND_OPERATOR.length());
+		
+		FParseResult leftResult = ParseExpression(InString, currentPos);
+		if (!leftResult.bSuccess)
+		{
+			return result;
+		}
+		
+		currentPos = SkipSpaces(InString, leftResult.NewPosition);
+		if (currentPos >= static_cast<int32>(InString.length()) || InString[currentPos] != ',')
+		{
+			return result;
+		}
+		++currentPos;
+		
+		FParseResult rightResult = ParseExpression(InString, currentPos);
+		if (!rightResult.bSuccess)
+		{
+			return result;
+		}
+		
+		currentPos = SkipSpaces(InString, rightResult.NewPosition);
+		if (currentPos >= static_cast<int32>(InString.length()) || InString[currentPos] != ')')
+		{
+			return result;
+		}
+		++currentPos;
+		
+		result.bValue = leftResult.bValue && rightResult.bValue;
+		result.NewPosition = currentPos;
+		result.bSuccess = true;
+		return result;
+	}
+
+	if (InString.substr(currentPos, OR_OPERATOR.length()) == OR_OPERATOR)
+	{
+		currentPos += static_cast<int32>(OR_OPERATOR.length());
+		
+		FParseResult leftResult = ParseExpression(InString, currentPos);
+		if (!leftResult.bSuccess)
+		{
+			return result;
+		}
+		
+		currentPos = SkipSpaces(InString, leftResult.NewPosition);
+		if (currentPos >= static_cast<int32>(InString.length()) || InString[currentPos] != ',')
+		{
+			return result;
+		}
+		++currentPos;
+		
+		FParseResult rightResult = ParseExpression(InString, currentPos);
+		if (!rightResult.bSuccess)
+		{
+			return result;
+		}
+		
+		currentPos = SkipSpaces(InString, rightResult.NewPosition);
+		if (currentPos >= static_cast<int32>(InString.length()) || InString[currentPos] != ')')
+		{
+			return result;
+		}
+		++currentPos;
+		
+		result.bValue = leftResult.bValue || rightResult.bValue;
+		result.NewPosition = currentPos;
+		result.bSuccess = true;
+		return result;
+	}
+
+	return result;
+}
+
+FParseResult EvaluateExpression(const std::string& InString)
+{
+	return ParseExpression(InString, 0);
+}
+
+void PrintResult(const FParseResult& InResult)
+{
+	if (!InResult.bSuccess)
+	{
+		std::cout << "Ошибка при разборе выражения" << std::endl;
+		return;
+	}
+	
+	if (InResult.bValue)
+	{
+		std::cout << "Значение логического выражения - T";
+	}
+	else
+	{
+		std::cout << "Значение логического выражения - F";
+	}
+	std::cout << std::endl;
+}
+
+int main()
+{
+	setlocale(LC_ALL, "Russian");
+	
+	std::string expressionString;
+	
+	std::cout << "Введите логическое выражение, заданное в виде строки: ";
+	std::getline(std::cin, expressionString);
+	
+	FParseResult result = EvaluateExpression(expressionString);
+	
+	PrintResult(result);
+	
+	return 0;
+}
