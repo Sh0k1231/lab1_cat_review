@@ -1,0 +1,131 @@
+#pragma once
+
+#include <fstream>
+#include <vector>
+#include <climits>
+#include <algorithm>
+#include <iostream>
+
+struct FResult
+{
+	int32			MinVolume = INT_MAX;
+	int32			TotalWeight = 0;
+	std::vector<int32>	SelectedIndices;
+};
+
+FResult BackRec4(const std::string& InFilename, std::vector<int32>& OutWeights, std::vector<int32>& OutVolumes)
+{
+	FResult			result;
+	std::ifstream	file(InFilename);
+
+	if (!file.is_open())
+	{
+		std::cout << "Такого файла не существует";
+		return result;
+	}
+
+	int32 numArtifacts;
+	int32 minWeight;
+	int32 maxWeight;
+
+	file >> numArtifacts >> minWeight >> maxWeight;
+
+	OutWeights.resize(numArtifacts);
+	OutVolumes.resize(numArtifacts);
+
+	for (int32 i = 0; i < numArtifacts; ++i)
+	{
+		file >> OutWeights[i];
+	}
+
+	for (int32 i = 0; i < numArtifacts; ++i)
+	{
+		file >> OutVolumes[i];
+	}
+
+	file.close();
+
+	std::vector<int32> DP(maxWeight + 1, INT_MAX);
+	DP[0] = 0;
+
+	for (int32 i = 0; i < numArtifacts; ++i)
+	{
+		for (int32 currentWeight = maxWeight; currentWeight >= OutWeights[i]; --currentWeight)
+		{
+			if (DP[currentWeight - OutWeights[i]] != INT_MAX)
+			{
+				int32 newVolume = DP[currentWeight - OutWeights[i]] + OutVolumes[i];
+				if (newVolume < DP[currentWeight])
+				{
+					DP[currentWeight] = newVolume;
+				}
+			}
+		}
+	}
+
+	int32 optimalWeight = -1;
+	result.MinVolume = INT_MAX;
+
+	for (int32 currentWeight = minWeight; currentWeight <= maxWeight; ++currentWeight)
+	{
+		if (DP[currentWeight] < result.MinVolume)
+		{
+			result.MinVolume = DP[currentWeight];
+			optimalWeight = currentWeight;
+		}
+	}
+
+	result.TotalWeight = optimalWeight;
+
+	if (optimalWeight != -1 && result.MinVolume != INT_MAX)
+	{
+		int32 remainingWeight = optimalWeight;
+
+		for (int32 i = numArtifacts - 1; i >= 0; --i)
+		{
+			if (remainingWeight >= OutWeights[i] &&
+				DP[remainingWeight] == DP[remainingWeight - OutWeights[i]] + OutVolumes[i])
+			{
+				result.SelectedIndices.push_back(i);
+				remainingWeight -= OutWeights[i];
+			}
+		}
+	}
+
+	return result;
+}
+
+void PrintResult(const FResult& InResult, const std::vector<int32>& InWeights, const std::vector<int32>& InVolumes)
+{
+	if (InResult.MinVolume == INT_MAX || InResult.TotalWeight == -1)
+	{
+		std::cout << "Решений не найдено" << std::endl;
+		return;
+	}
+
+	std::cout << "Минимальный объём: " << InResult.MinVolume << std::endl;
+	std::cout << "Суммарный вес: " << InResult.TotalWeight << std::endl;
+	std::cout << "Артефакты:" << std::endl;
+
+	for (int32 i = static_cast<int32>(InResult.SelectedIndices.size()) - 1; i >= 0; --i)
+	{
+		int32 idx = InResult.SelectedIndices[i];
+		std::cout << "  " << idx + 1 << ") Вес: " << InWeights[idx] << " кг, Объём: " << InVolumes[idx] << " куб.см" << std::endl;
+	}
+}
+
+int main()
+{
+	setlocale(LC_ALL, "ru");
+
+	std::string			filename = "f.txt";
+	std::vector<int32>	weights;
+	std::vector<int32>	volumes;
+
+	FResult result = BackRec4(filename, weights, volumes);
+
+	PrintResult(result, weights, volumes);
+
+	std::cout << std::endl;
+	return 0;
+}
